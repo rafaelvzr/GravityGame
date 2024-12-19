@@ -1,7 +1,6 @@
 #include "Sphere.h"
-
-Sphere::Sphere(const glm::mat4& vp,float radius, unsigned sectors, unsigned stacks, int upAxis)
-	: radius(radius), sectors(sectors), stacks(stacks), vp(vp), upAxis(upAxis)
+Sphere::Sphere(const glm::mat4& vp, float xc, float yc, float zc, float radius, std::string shaderPath , std::string texturePath, unsigned sectors, unsigned stacks, int upAxis)
+    : center{xc,yc,zc}, radius(radius), sectors(sectors), stacks(stacks), viewProjection(vp), upAxis(upAxis)
 {
 	std::vector<float>().swap(vertices);
     std::vector<float>().swap(normals);
@@ -89,39 +88,44 @@ Sphere::Sphere(const glm::mat4& vp,float radius, unsigned sectors, unsigned stac
 	if (upAxis != 3)
 		changeUpAxis(3, upAxis);
     std::vector<float> intercalated = getIntercalatedVerticesAndTexCoords();
-	model = glm::mat4(1.0f);
-	center = glm::vec3(0.0f, 0.0f, 0.0f);
+    model = glm::translate(glm::mat4(1.0f), center);
 	va = new VertexArray();
 	vb = new VertexBuffer(true, intercalated.data(), intercalated.size() * sizeof(float));
 	ib = new IndexBuffer(indices.data(), indices.size());
 	VertexBufferLayout layout;
-	layout.Push<float>(3);
+    layout.Push<float>(3);
+    layout.Push<float>(3);
     layout.Push<float>(2);
     va->addBuffer(*vb, layout);
-    shader = new Shader(SHADERS_PATH"/sphere.shader");
-    texture = new Texture(TEXTURES_PATH"/moon.png");
-    
-    shader->Bind();
-	texture->Bind();
-	shader->setUniform1i("u_Texture", 0);
-    shader->setUniform3f("ballCenter", 0.0f, 0.0f, 0.0f);
-    shader->setUniformMat4f("model", model);
-    shader->setUniformMat4f("viewProjection", vp);
+    shader = new Shader(SHADERS_PATH+shaderPath);
+    texture = new Texture(TEXTURES_PATH+texturePath);
     linesShader = new Shader(SHADERS_PATH"/linesShader.shader");
+    
+	shader->Bind();
+    texture->Bind();
+    shader->setUniform3f("ballCenter", center.x, center.y, center.z);
+    shader->setUniformMat4f("model", model);
+    shader->setUniformMat4f("viewProjection", viewProjection);
+    shader->setUniform1i("u_Texture", 0);
     linesShader->Bind();
-    linesShader->setUniform3f("ballCenter", 0.0f, 0.0f, 0.0f);
+    linesShader->setUniform3f("ballCenter", center.x, center.y, center.z);
     linesShader->setUniformMat4f("model", model);
-    linesShader->setUniformMat4f("viewProjection", vp);
+    linesShader->setUniformMat4f("viewProjection", viewProjection);
 
 }
 
+//Sphere::Sphere(const glm::mat4& vp, glm::vec3 center, float radius, unsigned sectors, unsigned stacks, int upAxis)
+//	: Sphere(vp, center.x, center.y, center.z, radius, sectors, stacks, upAxis)
+//{
+//}
+
 Sphere::~Sphere()
 {
-	delete va;
-	delete vb;
-	delete ib;
-	delete shader;
-	delete texture;
+	//delete va;
+	//delete vb;
+	//delete ib;
+	//delete shader;
+	//delete texture;
 }
 
 void Sphere::draw()
@@ -144,14 +148,14 @@ void Sphere::update()
 {
 	shader->Bind();
     texture->Bind();
-    shader->setUniform3f("ballCenter", 0.0f, 0.0f, 0.0f);
+    shader->setUniform3f("ballCenter", center.x, center.y, center.z);
     shader->setUniformMat4f("model", model);
-    shader->setUniformMat4f("viewProjection", vp);
+    shader->setUniformMat4f("viewProjection", viewProjection);
     shader->setUniform1i("u_Texture", 0);
     linesShader->Bind();
-    linesShader->setUniform3f("ballCenter", 0.0f, 0.0f, 0.0f);
+    linesShader->setUniform3f("ballCenter", center.x, center.y, center.z);
     linesShader->setUniformMat4f("model", model);
-    linesShader->setUniformMat4f("viewProjection", vp);
+    linesShader->setUniformMat4f("viewProjection", viewProjection);
 }
 
 std::vector<float> Sphere::getIntercalatedVerticesAndTexCoords() const {
@@ -160,24 +164,16 @@ std::vector<float> Sphere::getIntercalatedVerticesAndTexCoords() const {
 
     size_t vertexCount = vertices.size() / 3;
     size_t texCoordCount = texCoords.size() / 2;
-    size_t count = std::min(vertexCount, texCoordCount);
+	size_t normalsCount = normals.size() / 3;
+    size_t count = std::min(std::min(vertexCount, texCoordCount),normalsCount);
 
     for (size_t i = 0; i < count; ++i) {
         intercalated.push_back(vertices[i * 3]);
         intercalated.push_back(vertices[i * 3 + 1]);
         intercalated.push_back(vertices[i * 3 + 2]);
-        intercalated.push_back(texCoords[i * 2]);
-        intercalated.push_back(texCoords[i * 2 + 1]);
-    }
-
-    // If there are remaining vertices or texCoords, append them
-    for (size_t i = count; i < vertexCount; ++i) {
-        intercalated.push_back(vertices[i * 3]);
-        intercalated.push_back(vertices[i * 3 + 1]);
-        intercalated.push_back(vertices[i * 3 + 2]);
-    }
-
-    for (size_t i = count; i < texCoordCount; ++i) {
+        intercalated.push_back(normals[i * 3]);
+        intercalated.push_back(normals[i * 3 + 1]);
+        intercalated.push_back(normals[i * 3 + 2]);
         intercalated.push_back(texCoords[i * 2]);
         intercalated.push_back(texCoords[i * 2 + 1]);
     }
@@ -185,15 +181,30 @@ std::vector<float> Sphere::getIntercalatedVerticesAndTexCoords() const {
     return intercalated;
 }
 
+void Sphere::updatePosition()
+{
+    model = glm::translate(glm::mat4(1.0f), center);
+}
+
 void Sphere::rotateLeft()
 {
-	model = glm::rotate(model, glm::radians(0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
+	float x = center.x;
+	float z = center.z;
+	center.x = x * cos(0.001f) + z * sin(0.001f);
+	center.z = -x * sin(0.001f) + z * cos(0.001f);
 }
 
 void Sphere::rotateRight()
 {
 	model = glm::rotate(model, glm::radians(-0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
+
+void Sphere::setUniform3f(const std::string& name, float f1, float f2, float f3)
+{
+	shader->Bind();
+	shader->setUniform3f(name, f1, f2, f3);
+}
+
 
 void Sphere::changeUpAxis(int from, int to)
 {

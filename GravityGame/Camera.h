@@ -44,4 +44,5 @@ public:
 	void translateCamera(CameraMovementDirection direction, float deltaTime);
 	void rotateCamera(float xoffset, float yoffset);
 	void zoomCamera(float yoffset);
+	void resetCamera();
 };

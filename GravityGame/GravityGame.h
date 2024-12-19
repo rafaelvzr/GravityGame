@@ -8,6 +8,7 @@
 #include"imgui.h"
 #include"Sphere.h"
 #include"Camera.h"
+#include <imgui_impl_glfw.h>
 
 
 
@@ -17,14 +18,16 @@ class Application
 private:
 	Renderer renderer;
 	GLFWwindow* window;
+	Camera camera;
 
 	Sphere s;
-	Camera camera;
+	Sphere lightSource;
 	float deltaTime;
 	float lastFrame;
 	float lastX;
 	float lastY;
 	bool firstMouse;
+	bool menu = false;
 public:
 	bool rotateLeft = false;
 	bool rotateRight = false;

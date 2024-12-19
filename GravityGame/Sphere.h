@@ -28,20 +28,23 @@ private:
 	Renderer renderer;
 	glm::vec3 center;
 	glm::mat4 model;
-	const glm::mat4 &vp;
+	const glm::mat4 &viewProjection;
 	int upAxis; //X=1, Y=2, or Z=3
 public:
-	Sphere(const glm::mat4& vp, float radius = 1, unsigned sectors = 36, unsigned stacks = 18, int upAxis = 3);
+	Sphere(const glm::mat4& vp, float xc, float yc, float zc, float radius = 1, std::string shaderPath = "", std::string texturePath = "", unsigned sectors = 36, unsigned stacks = 18, int upAxis = 3);
+	//Sphere(const glm::mat4& vp, glm::vec3 center, float radius = 1, unsigned sectors = 36, unsigned stacks = 18, int upAxis = 3);
 	~Sphere();
 	void draw();
 	void drawLines();
 	void update();
-	inline std::vector<float> getVertices()		const { return vertices; }
-	inline std::vector<unsigned> getIndices()	const { return indices; }
-	inline glm::vec3 getCenter()				const { return center; }
+	inline std::vector<float> getVertices()		const	{ return vertices; }
+	inline std::vector<unsigned> getIndices()	const	{ return indices; }
+	inline glm::vec3& getCenter()						{ return center; }
 	std::vector<float> getIntercalatedVerticesAndTexCoords() const;
+	void updatePosition();
 	void rotateLeft();
 	void rotateRight();
+	void setUniform3f(const std::string& name, float f1, float f2, float f3);
 private:
 	void changeUpAxis(int from, int to);
 };
