@@ -42,8 +42,8 @@ void main(void) {
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse = diff * lightColor;
 
-    //outColor = texture(u_Texture,v_texCoord);
-    outColor = vec4(1.0);
+    outColor = texture(u_Texture,v_texCoord);
+    //outColor = vec4(1.0);
     vec3 result = (ambient + diffuse);
     outColor = outColor * vec4(result,1.0);
 }

@@ -44,7 +44,10 @@ public:
 	void updatePosition();
 	void rotateLeft();
 	void rotateRight();
+	void setUniform1f(const std::string& name, float f);
+	void setUniform2f(const std::string& name, float f1, float f2);
 	void setUniform3f(const std::string& name, float f1, float f2, float f3);
+	void setNewShader(const std::string& newShader); //debug purposes
 private:
 	void changeUpAxis(int from, int to);
 };

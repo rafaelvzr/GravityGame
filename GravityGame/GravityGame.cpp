@@ -5,8 +5,8 @@ namespace Gravity
 {
 
 Application::Application(GLFWwindow* w)
-	: camera(), s(camera.getViewProj(), 0.0f, 0.0f, 0.0f, 0.7f, std::string("/sphere.shader"), std::string("/earth2.png"), 40, 18, 2),
-	lightSource(camera.getViewProj(), 2.0f, 2.0f, -2.0f, 0.2f, std::string("/lightSource.shader"), std::string("/earth2.png"), 40, 18, 2),
+	: camera(), s(camera.getViewProj(), 0.0f, 0.0f, 0.0f, 1.0f, std::string("/sphere.shader"), std::string("/earth2.png"), 40, 18, 2),
+	lightSource(camera.getViewProj(), 10.0f, 0.0f, -3.0f, 1.0f, std::string("/lightSource2.shader"), std::string("/earth2.png"), 40, 18, 2),
 	deltaTime(0.0f), lastFrame(0.0f), firstMouse(true), lastX(0.0f), lastY(0.0f)
 {
 	window = w;
@@ -17,12 +17,15 @@ Application::Application(GLFWwindow* w)
 	glfwSetScrollCallback(window, scroll_callback);
 
 	float r = 204, g = 57, b = 123;
+	r = 255, g = 255, b = 255	;
 	r /= 255.0f;
 	g /= 255.0f;
 	b /= 255.0f;
 	lightSource.setUniform3f("lightColor", r,g,b);	
 	s.setUniform3f("lightColor", r,g,b);
 	s.setUniform3f("lightPos", lightSource.getCenter().x, lightSource.getCenter().y, lightSource.getCenter().z);
+	lightSource.setUniform2f("iResolution", 1024.0f, 768.0f);
+
 }
 
 
@@ -32,17 +35,12 @@ void Application::OnRender()
 	s.draw();
 	//s.drawLines();
 	lightSource.draw();
-	lightSource.drawLines();
+	//lightSource.drawLines();
 }
 
 void Application::OnUpdate()
 {
-	float currentFrame = glfwGetTime();
-	deltaTime = currentFrame - lastFrame;
-	lastFrame = currentFrame;
 	camera.update();
-	s.update();
-	lightSource.update();
 	if (walkingFoward)
 		camera.translateCamera(FORWARD, deltaTime);
 	if (walkingBackward)
@@ -51,24 +49,71 @@ void Application::OnUpdate()
 		camera.translateCamera(LEFT, deltaTime);
 	if (walkingRight)
 		camera.translateCamera(RIGHT, deltaTime);
-	if (rotateLeft)
-		s.rotateLeft();
-	if (rotateRight)
-		s.rotateRight();
-	lightSource.rotateLeft();
-	lightSource.updatePosition();
-	s.setUniform3f("lightPos", lightSource.getCenter().x, lightSource.getCenter().y, lightSource.getCenter().z);
+	s.update();
+	lightSource.update();
+		float currentFrame = glfwGetTime();
+		lightSource.setUniform1f("iTime", currentFrame);
+	if (!pause) {
+		deltaTime = currentFrame - lastFrame;
+		lastFrame = currentFrame;
+		if (rotateLeft)
+			s.rotateLeft();
+		if (rotateRight)
+			s.rotateRight();
+		lightSource.rotateLeft();
+		lightSource.updatePosition();
+		s.setUniform3f("lightPos", lightSource.getCenter().x, lightSource.getCenter().y, lightSource.getCenter().z);
+	}
 }
-
 void Application::OnImGuiRender()
 {
+	enum StarShader { Perlin, Simplex, Count };
+	static int elem = 0;
+	static int previousElem = 0;
+	const char* star_shaders[Count] = { "/lightSource2.shader", "/lightSource3.shader" };
+	const char* elem_name = (elem >= 0 && elem < Count) ? star_shaders[elem] : "Unknown";
+	static float scale = 1.0f;
+	static float speed = 1.0f;
+	static ImVec4 cor1 = ImVec4(0.5f, 0.0f, 0.0f, 1.0f);
+	static ImVec4 cor2 = ImVec4(1.0f, 1.0f, 0.5f, 1.0f);
+	static float potencia = 0.0f;
 	if (menu)
 	{
 		ImGui::Begin("Move lightSource");
 		ImGui::SliderFloat("X", &(lightSource.getCenter().x), -10.0f, 10.0f);
 		ImGui::SliderFloat("Y", &(lightSource.getCenter().y), -10.0f, 10.0f);
 		ImGui::SliderFloat("Z", &(lightSource.getCenter().z), -10.0f, 10.0f);
+		if (ImGui::Button("Pause"))
+			pause = !pause;
+		if (ImGui::TreeNode("Estrela"))
+		{
+			ImGui::SliderFloat("scale", &(scale), 0.0f, 20.0f);
+			ImGui::SliderFloat("speed", &(speed), 0.0f, 5.0f);
+			ImGui::ColorEdit3("cor 1", (float*)&cor1);
+			ImGui::ColorEdit3("cor 2", (float*)&cor2);            
+			ImGui::SliderFloat("slider float", &potencia, -3.0f, 3.0f, "ratio = %.3f");
+			if (ImGui::Button("Perlin")) {
+				elem = Perlin;
+				previousElem = Simplex;
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Simplex")) {
+				elem = Simplex;
+				previousElem = Perlin;
+			}
+			ImGui::Text("Current shader: %s", elem_name);
+			ImGui::TreePop();
+		}
 		ImGui::End();
+	}
+	lightSource.setUniform1f("scale", scale);
+	lightSource.setUniform1f("speed", speed);
+	lightSource.setUniform3f("cor1", cor1.x, cor1.y, cor1.z);
+	lightSource.setUniform3f("cor2", cor2.x, cor2.y, cor2.z);
+	lightSource.setUniform1f("potencia", potencia);
+	if (elem != previousElem) {
+		lightSource.setNewShader(star_shaders[elem]);
+		previousElem = elem;
 	}
 }
 

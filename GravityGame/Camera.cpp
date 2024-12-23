@@ -5,14 +5,14 @@ Camera::Camera()
 	speed(SPEED), mouseSensitivity(SENSITIVITY), fov(FOV)
 {
 	view = glm::lookAt(Position, Position + Front, Up);
-	proj = glm::perspective(glm::radians(fov), 1024.0f / 768.0f, 0.1f, 100.0f);
+	proj = glm::perspective(glm::radians(fov), 1024.0f / 768.0f, 0.1f, 1000.0f);
 	viewProj = proj * view;
 }
 
 void Camera::update()
 {
 	view = glm::lookAt(Position, Position + Front, Up);
-	proj = glm::perspective(glm::radians(fov), 1024.0f / 768.0f, 0.1f, 100.0f);
+	proj = glm::perspective(glm::radians(fov), 1024.0f / 768.0f, 0.1f, 1000.0f);
 	viewProj = proj * view;
 }
 
@@ -73,7 +73,7 @@ void Camera::resetCamera()
 	Up = glm::vec3(0.0f, 1.0f, 0.0f);
 	yaw = YAW;
 	pitch = PITCH;
-	view = glm::lookAt(Position, Position + Front, Up);
+	view = glm::lookAt(Position, glm::vec3(0.0f, 0.0f,0.0f), Up);
 	proj = glm::perspective(glm::radians(FOV), 1024.0f / 768.0f, 0.1f, 100.0f);
 	viewProj = proj * view;
 }

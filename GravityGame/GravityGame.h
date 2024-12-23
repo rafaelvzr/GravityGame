@@ -28,6 +28,7 @@ private:
 	float lastY;
 	bool firstMouse;
 	bool menu = false;
+	bool pause = false;
 public:
 	bool rotateLeft = false;
 	bool rotateRight = false;

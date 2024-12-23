@@ -199,10 +199,33 @@ void Sphere::rotateRight()
 	model = glm::rotate(model, glm::radians(-0.1f), glm::vec3(0.0f, 1.0f, 0.0f));
 }
 
+void Sphere::setUniform1f(const std::string& name, float f)
+{
+	shader->Bind();
+	shader->setUniform1f(name, f);
+}
+
+void Sphere::setUniform2f(const std::string& name, float f1, float f2)
+{
+	shader->Bind();
+	shader->setUniform2f(name, f1, f2);
+}
+
 void Sphere::setUniform3f(const std::string& name, float f1, float f2, float f3)
 {
 	shader->Bind();
 	shader->setUniform3f(name, f1, f2, f3);
+}
+
+void Sphere::setNewShader(const std::string& newShader)
+{
+	delete shader;
+	shader = new Shader(SHADERS_PATH + newShader);
+	shader->Bind();
+	shader->setUniform3f("ballCenter", center.x, center.y, center.z);
+	shader->setUniformMat4f("model", model);
+	shader->setUniformMat4f("viewProjection", viewProjection);
+	shader->setUniform1i("u_Texture", 0);
 }
 
 
