@@ -1,13 +1,20 @@
 ﻿#include "GravityGame.h"
 #include <iostream>
 
+float aleatorio()
+{
+	float r = (float) rand() / RAND_MAX;
+	r *= 240.0f;
+	r -= 120.0f;
+	return r;
+}
+
 namespace Gravity
 {
 
 Application::Application(GLFWwindow* w)
-	: camera(), s(camera.getViewProj(), 0.0f, 0.0f, 0.0f, 1.0f, std::string("/sphere.shader"), std::string("/earth2.png"), 40, 18, 2),
-	lightSource(camera.getViewProj(), 10.0f, 0.0f, -3.0f, 1.0f, std::string("/lightSource2.shader"), std::string("/earth2.png"), 40, 18, 2),
-	deltaTime(0.0f), lastFrame(0.0f), firstMouse(true), lastX(0.0f), lastY(0.0f)
+	: camera(), deltaTime(0.0f), lastFrame(0.0f), firstMouse(true), lastX(0.0f), lastY(0.0f), marker(camera), grid(camera), 
+	portal(camera, 20.0f,22.0f,-60.0f,-120.0f), createNewScene(false)
 {
 	window = w;
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -16,31 +23,34 @@ Application::Application(GLFWwindow* w)
 	glfwSetCursorPosCallback(window, mouse_callback);
 	glfwSetScrollCallback(window, scroll_callback);
 
-	float r = 204, g = 57, b = 123;
-	r = 255, g = 255, b = 255	;
-	r /= 255.0f;
-	g /= 255.0f;
-	b /= 255.0f;
-	lightSource.setUniform3f("lightColor", r,g,b);	
-	s.setUniform3f("lightColor", r,g,b);
-	s.setUniform3f("lightPos", lightSource.getCenter().x, lightSource.getCenter().y, lightSource.getCenter().z);
-	lightSource.setUniform2f("iResolution", 1024.0f, 768.0f);
+	Planet* p1 = new Planet(-20.0f, 40.0f, 50.0f, 2.0f, 10.0f, true, camera);
+	Star* st = new Star(0.0f, 0.0f, -3.0f, 6.0f, 1000.0f,false, camera, "/lightSource2.shader");
 
+	p1->setVelocity(0.5f,-0.5f,-0.3f);
+
+	celestialBodies.push_back(p1);
+	celestialBodies.push_back(st);
 }
 
 
 void Application::OnRender()
 {
 	renderer.Clear();
-	s.draw();
-	//s.drawLines();
-	lightSource.draw();
-	//lightSource.drawLines();
+	grid.draw();
+	marker.draw();
+	for (size_t i = 0; i < celestialBodies.size(); ++i)
+	{
+		celestialBodies[i]->draw();
+	}
+	portal.draw();
 }
 
 void Application::OnUpdate()
 {
 	camera.update();
+	grid.update();
+	marker.update();
+	portal.update(deltaTime);
 	if (walkingFoward)
 		camera.translateCamera(FORWARD, deltaTime);
 	if (walkingBackward)
@@ -49,72 +59,94 @@ void Application::OnUpdate()
 		camera.translateCamera(LEFT, deltaTime);
 	if (walkingRight)
 		camera.translateCamera(RIGHT, deltaTime);
-	s.update();
-	lightSource.update();
-		float currentFrame = glfwGetTime();
-		lightSource.setUniform1f("iTime", currentFrame);
-	if (!pause) {
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-		if (rotateLeft)
-			s.rotateLeft();
-		if (rotateRight)
-			s.rotateRight();
-		lightSource.rotateLeft();
-		lightSource.updatePosition();
-		s.setUniform3f("lightPos", lightSource.getCenter().x, lightSource.getCenter().y, lightSource.getCenter().z);
+	if (markerFront)
+		marker.moveZAxis(50.0f, deltaTime);
+	if (markerBack)
+		marker.moveZAxis(-50.0f, deltaTime);
+	if (markerLeft)
+		marker.moveXAxis(-50.0f, deltaTime);
+	if (markerRight)
+		marker.moveXAxis(50.0f, deltaTime);
+	if (markerUp)
+		marker.moveYAxis(50.0f, deltaTime);
+	if (markerDown)
+		marker.moveYAxis(-50.0f, deltaTime);
+	if (rotateClockwise)
+		camera.rotateScene(50.0f, deltaTime);
+	if (rotateCounterClockwise)
+		camera.rotateScene(-50.0f, deltaTime);
+	float currentFrame = glfwGetTime();
+	deltaTime = currentFrame - lastFrame;
+	lastFrame = currentFrame;
+	if (!pause) 
+	{
+		for (size_t i = 0; i < celestialBodies.size(); ++i)
+		{
+			for (size_t j = 0; j < celestialBodies.size(); ++j)
+			{
+				if (i != j)
+					if (celestialBodies[i]->getMovable())
+						celestialBodies[i]->getAttracted(*celestialBodies[j]);
+			}
+		}
+		for (size_t i = 0; i < celestialBodies.size(); ++i)
+			celestialBodies[i]->update(deltaTime);
+	}
+	for (size_t i = 0; i < celestialBodies.size(); ++i)
+		celestialBodies[i]->updateVP();
+	float d = glm::distance(celestialBodies[0]->getPosition(), portal.getCenter());
+	if (d < 60.0f)
+		createNewScene = true;
+	if (createNewScene)
+	{
+		celestialBodies.clear();
+		Planet* p1 = new Planet(aleatorio(), aleatorio(), aleatorio(), 2.0f, 10.0f, true, camera);
+		Star* st = new Star(aleatorio(), aleatorio(), aleatorio(), 6.0f, 1000.0f, false, camera, "/lightSource2.shader");
+		celestialBodies.push_back(p1);
+		celestialBodies.push_back(st);
+		portal.setPosition(aleatorio(), aleatorio(), aleatorio());
+		createNewScene = false;
 	}
 }
 void Application::OnImGuiRender()
 {
-	enum StarShader { Perlin, Simplex, Count };
-	static int elem = 0;
-	static int previousElem = 0;
-	const char* star_shaders[Count] = { "/lightSource2.shader", "/lightSource3.shader" };
-	const char* elem_name = (elem >= 0 && elem < Count) ? star_shaders[elem] : "Unknown";
-	static float scale = 1.0f;
-	static float speed = 1.0f;
-	static ImVec4 cor1 = ImVec4(0.5f, 0.0f, 0.0f, 1.0f);
-	static ImVec4 cor2 = ImVec4(1.0f, 1.0f, 0.5f, 1.0f);
-	static float potencia = 0.0f;
 	if (menu)
 	{
-		ImGui::Begin("Move lightSource");
-		ImGui::SliderFloat("X", &(lightSource.getCenter().x), -10.0f, 10.0f);
-		ImGui::SliderFloat("Y", &(lightSource.getCenter().y), -10.0f, 10.0f);
-		ImGui::SliderFloat("Z", &(lightSource.getCenter().z), -10.0f, 10.0f);
+		ImGui::Begin("Menu", &menu);
 		if (ImGui::Button("Pause"))
 			pause = !pause;
-		if (ImGui::TreeNode("Estrela"))
+		if (ImGui::TreeNode("Camera"))
 		{
-			ImGui::SliderFloat("scale", &(scale), 0.0f, 20.0f);
-			ImGui::SliderFloat("speed", &(speed), 0.0f, 5.0f);
-			ImGui::ColorEdit3("cor 1", (float*)&cor1);
-			ImGui::ColorEdit3("cor 2", (float*)&cor2);            
-			ImGui::SliderFloat("slider float", &potencia, -3.0f, 3.0f, "ratio = %.3f");
-			if (ImGui::Button("Perlin")) {
-				elem = Perlin;
-				previousElem = Simplex;
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Simplex")) {
-				elem = Simplex;
-				previousElem = Perlin;
-			}
-			ImGui::Text("Current shader: %s", elem_name);
+			ImGui::Text("x: %f y: %f z:%f", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+			ImGui::TreePop();
+		}
+		if (ImGui::TreeNode("Gravidade"))
+		{
+			ImGui::Text("x: %f y: %f z:%f", celestialBodies[0]->getPosition().x, celestialBodies[0]->getPosition().y, celestialBodies[0]->getPosition().z);
 			ImGui::TreePop();
 		}
 		ImGui::End();
 	}
-	lightSource.setUniform1f("scale", scale);
-	lightSource.setUniform1f("speed", speed);
-	lightSource.setUniform3f("cor1", cor1.x, cor1.y, cor1.z);
-	lightSource.setUniform3f("cor2", cor2.x, cor2.y, cor2.z);
-	lightSource.setUniform1f("potencia", potencia);
-	if (elem != previousElem) {
-		lightSource.setNewShader(star_shaders[elem]);
-		previousElem = elem;
-	}
+}
+
+
+
+void Application::createPlanet(float radius, float mass)
+{
+	Planet* p = new Planet(marker.getPosition(), radius, mass,true, camera);
+	celestialBodies.push_back(p);
+}
+
+void Application::createYellowStar(float radius, float mass)
+{
+	Star* s = new Star(marker.getPosition(), radius, mass,false, camera, "/lightSource2.shader");
+	celestialBodies.push_back(s);
+}
+
+void Application::createBlueStar(float radius, float mass)
+{
+	Star* s = new Star(marker.getPosition(), radius, mass, false, camera, "/lightSource3.shader");
+	celestialBodies.push_back(s);
 }
 
 void Application::key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -145,14 +177,34 @@ void Application::key_callback(GLFWwindow* window, int key, int scancode, int ac
 	{
 		app->camera.resetCamera();
 	}
+	if (key == GLFW_KEY_P && action == GLFW_PRESS)
+	{
+		app->pause = !app->pause;
+	}
 	if (key == GLFW_KEY_Q && action == GLFW_PRESS)
-		app->rotateLeft = true;
+	{
+		app->rotateClockwise = true;
+	}
 	if (key == GLFW_KEY_Q && action == GLFW_RELEASE)
-		app->rotateLeft = false;
+	{
+		app->rotateClockwise = false;
+	}
 	if (key == GLFW_KEY_E && action == GLFW_PRESS)
-		app->rotateRight = true;
+	{
+		app->rotateCounterClockwise = true;
+	}
 	if (key == GLFW_KEY_E && action == GLFW_RELEASE)
-		app->rotateRight = false;
+	{
+		app->rotateCounterClockwise = false;
+	}
+	if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+	{
+		app->createYellowStar(5.0f, 100.0f);
+	}
+	if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+	{
+		app->createBlueStar(25.0f, 500.0f);
+	}
 	if (key == GLFW_KEY_W && action == GLFW_PRESS)
 	{
 		app->walkingFoward = true;
@@ -184,6 +236,55 @@ void Application::key_callback(GLFWwindow* window, int key, int scancode, int ac
 	if (key == GLFW_KEY_D && action == GLFW_RELEASE)
 	{
 		app->walkingRight = false;
+	}
+
+	if(key == GLFW_KEY_UP && action == GLFW_PRESS)
+	{
+		app->markerFront = true;
+	}
+	if (key == GLFW_KEY_UP && action == GLFW_RELEASE)
+	{
+		app->markerFront = false;
+	}
+	if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+	{
+		app->markerBack = true;
+	}
+	if (key == GLFW_KEY_DOWN && action == GLFW_RELEASE)
+	{
+		app->markerBack = false;
+	}
+	if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+	{
+		app->markerLeft = true;
+	}
+	if (key == GLFW_KEY_LEFT && action == GLFW_RELEASE)
+	{
+		app->markerLeft = false;
+	}
+	if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+	{
+		app->markerRight = true;
+	}
+	if (key == GLFW_KEY_RIGHT && action == GLFW_RELEASE)
+	{
+		app->markerRight = false;
+	}
+	if (key == GLFW_KEY_Z && action == GLFW_PRESS)
+	{
+		app->markerUp = true;
+	}
+	if (key == GLFW_KEY_Z && action == GLFW_RELEASE)
+	{
+		app->markerUp = false;
+	}
+	if (key == GLFW_KEY_X && action == GLFW_PRESS)
+	{
+		app->markerDown = true;
+	}
+	if (key == GLFW_KEY_X && action == GLFW_RELEASE)
+	{
+		app->markerDown = false;
 	}
 }
 

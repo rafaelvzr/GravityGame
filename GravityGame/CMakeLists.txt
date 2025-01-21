@@ -19,7 +19,7 @@ add_executable(GravityGame
     GravityGame.cpp 
     vendor/stb_image/stb_image.cpp
     main.cpp
- "Sphere.h" "Sphere.cpp" "Camera.cpp" "Camera.h")
+ "Sphere.h" "Sphere.cpp" "Camera.cpp" "Camera.h" "CelestialBody.h" "CelestialBody.cpp")
 
 target_compile_definitions(GravityGame PRIVATE SHADERS_PATH="${CMAKE_SOURCE_DIR}/GravityGame/res/shaders")
 target_compile_definitions(GravityGame PRIVATE TEXTURES_PATH="${CMAKE_SOURCE_DIR}/GravityGame/res/textures")

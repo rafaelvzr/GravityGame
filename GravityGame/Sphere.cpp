@@ -121,11 +121,11 @@ Sphere::Sphere(const glm::mat4& vp, float xc, float yc, float zc, float radius, 
 
 Sphere::~Sphere()
 {
-	//delete va;
-	//delete vb;
-	//delete ib;
-	//delete shader;
-	//delete texture;
+	delete va;
+	delete vb;
+	delete ib;
+	delete shader;
+	delete texture;
 }
 
 void Sphere::draw()
@@ -148,12 +148,10 @@ void Sphere::update()
 {
 	shader->Bind();
     texture->Bind();
-    shader->setUniform3f("ballCenter", center.x, center.y, center.z);
     shader->setUniformMat4f("model", model);
     shader->setUniformMat4f("viewProjection", viewProjection);
     shader->setUniform1i("u_Texture", 0);
     linesShader->Bind();
-    linesShader->setUniform3f("ballCenter", center.x, center.y, center.z);
     linesShader->setUniformMat4f("model", model);
     linesShader->setUniformMat4f("viewProjection", viewProjection);
 }
@@ -215,6 +213,12 @@ void Sphere::setUniform3f(const std::string& name, float f1, float f2, float f3)
 {
 	shader->Bind();
 	shader->setUniform3f(name, f1, f2, f3);
+}
+
+void Sphere::setUniformMat4f(const std::string& name, const glm::mat4& mat)
+{
+	shader->Bind();
+	shader->setUniformMat4f(name, mat);
 }
 
 void Sphere::setNewShader(const std::string& newShader)

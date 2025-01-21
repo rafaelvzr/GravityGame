@@ -285,14 +285,16 @@ float pnoise(vec4 P, vec4 rep)
   return 2.2 * n_xyzw;
 }
 
-uniform float scale;
-uniform float speed;
-uniform vec3 cor1;
-uniform vec3 cor2;
-uniform float potencia;
 
 
-float color(vec3 xyz) { return cnoise(vec4(scale*xyz, speed*iTime)); }
+
+
+float color(vec3 xyz) 
+{
+    float scale = 0.25;
+    float speed = 0.25;
+    return cnoise(vec4(scale*xyz, speed*iTime)); 
+}
 
 void main() {
     vec3 xyz = v_fragCoord;
@@ -305,9 +307,8 @@ void main() {
     n += 0.0625 * color(xyz * 16.0 - 4.0 * step);
     n += 0.03125 * color(xyz * 32.0 - 5.0 * step);
  
+    vec3 cor1 = vec3(0.67,0.84,0.9);
+    vec3 cor2 = vec3(1.0);
     vec3 cor = mix(cor1, cor2, pow(n,1.0));
-    //cor = mix(vec3(1.0), vec3(1.0), pow(n,1.0));
-    //cor = mix(vec3(0.5, 0.0, 0.0), vec3(1.0, 1.0, 0.5), pow(n,1.0));
-    //vec3 cor = mix(vec3(14.0/255.0, 190.0/255.0, 242.0/255.0), vec3(1.0, 1.0, 1.0), pow(n,1.0));
     outColor = vec4(cor,1.0);
 }

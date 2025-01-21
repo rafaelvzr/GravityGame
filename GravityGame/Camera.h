@@ -6,7 +6,7 @@
 
 const float YAW =			-90.0f;
 const float PITCH =			0.0f;
-const float SPEED =			2.5f;
+const float SPEED =			250.0f;
 const float SENSITIVITY =	0.01;
 const float FOV =			45.0f;
 enum CameraMovementDirection {
@@ -40,9 +40,11 @@ public:
 	inline const glm::mat4& getView() const { return view; }
 	inline const glm::mat4& getProj() const { return proj; }
 	inline const glm::mat4& getViewProj() const { return viewProj; }
+	inline const glm::vec3& getPosition() const { return Position; } //debug
 
 	void translateCamera(CameraMovementDirection direction, float deltaTime);
 	void rotateCamera(float xoffset, float yoffset);
 	void zoomCamera(float yoffset);
 	void resetCamera();
+	void rotateScene(float direction, float deltaTime);
 };

@@ -37,6 +37,8 @@ public:
 	void draw();
 	void drawLines();
 	void update();
+	void setCenter(float x, float y, float z) { center.x = x; center.y = y; center.z = z; }
+	void setCenter(glm::vec3 c) { center = c; }
 	inline std::vector<float> getVertices()		const	{ return vertices; }
 	inline std::vector<unsigned> getIndices()	const	{ return indices; }
 	inline glm::vec3& getCenter()						{ return center; }
@@ -47,6 +49,7 @@ public:
 	void setUniform1f(const std::string& name, float f);
 	void setUniform2f(const std::string& name, float f1, float f2);
 	void setUniform3f(const std::string& name, float f1, float f2, float f3);
+	void setUniformMat4f(const std::string& name, const glm::mat4& mat);
 	void setNewShader(const std::string& newShader); //debug purposes
 private:
 	void changeUpAxis(int from, int to);
